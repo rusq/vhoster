@@ -4,22 +4,17 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 )
 
 type proxyWrapper struct {
-	VHost string
-	URI   *url.URL
+	vhost Host
 	l     net.Listener
 	srv   *http.Server
 	wg    *sync.WaitGroup // reference to the parent waitgroup
 }
 
-func (pw proxyWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	pw.srv.Handler.ServeHTTP(w, r)
-}
-
+// Close closes all open handles and connections.
 func (pw proxyWrapper) Close() error {
 	pw.srv.Shutdown(context.Background())
 	pw.l.Close()

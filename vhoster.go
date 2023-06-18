@@ -28,6 +28,14 @@ type Server struct {
 	wg  *sync.WaitGroup         // a waitgroup for running servers
 }
 
+// Host is a single Virtual Host.
+type Host struct {
+	// Name is the name of the Virtual Host.
+	Name string
+	// URI is the URI of the target HTTP server.
+	URI *url.URL
+}
+
 // Listen initialises the server and starts listening on the given address.
 func Listen(addr string) (*Server, error) {
 	ln, err := net.Listen("tcp", addr)
@@ -80,16 +88,18 @@ func (s *Server) Add(vhost string, uri *url.URL) error {
 	srv := http.Server{
 		Handler: httputil.NewSingleHostReverseProxy(uri),
 	}
-	s.wg.Add(1)
 	pw := proxyWrapper{
-		l:     ml,
-		srv:   &srv,
-		wg:    s.wg,
-		VHost: vhost,
-		URI:   uri,
+		l:   ml,
+		srv: &srv,
+		wg:  s.wg,
+		vhost: Host{
+			Name: vhost,
+			URI:  uri,
+		},
 	}
 	s.pws[vhost] = pw
 
+	s.wg.Add(1)
 	go func() {
 		if err := srv.Serve(ml); err != nil {
 			if errors.Is(err, http.ErrServerClosed) {
@@ -119,6 +129,9 @@ func (s *Server) Wait() {
 	<-s.done
 }
 
+// errorhandler loops over the errors returned by the vhost manager
+// and handles them, if necessary.  It exists when done channel is
+// closed.
 func errorhandler(vm *vhost.HTTPMuxer, done <-chan struct{}) {
 	for {
 		select {
@@ -170,21 +183,13 @@ func handleError(conn net.Conn, err error) {
 	}
 }
 
-type Host struct {
-	Name string
-	URI  *url.URL
-}
-
 func (s *Server) List() []Host {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	var vhosts []Host
-	for vhost, pw := range s.pws {
-		vhosts = append(vhosts, Host{
-			Name: vhost,
-			URI:  pw.URI,
-		})
+	for _, pw := range s.pws {
+		vhosts = append(vhosts, pw.vhost)
 	}
 	return vhosts
 }
