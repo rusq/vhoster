@@ -1,2 +1,4 @@
 github.com/inconshreveable/go-vhost v1.0.0 h1:IK4VZTlXL4l9vz2IZoiSFbYaaqUW7dXJAiPriUN5Ur8=
 github.com/inconshreveable/go-vhost v1.0.0/go.mod h1:aA6DnFhALT3zH0y+A39we+zbrdMC2N0X/q21e6FI0LU=
+github.com/rusq/osenv/v2 v2.0.1 h1:1LtNt8VNV/W86wb38Hyu5W3Rwqt/F1JNRGE+8GRu09o=
+github.com/rusq/osenv/v2 v2.0.1/go.mod h1:+wJBSisjNZpfoD961JzqjaM+PtaqSusO3b4oVJi7TFY=

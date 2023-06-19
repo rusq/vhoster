@@ -9,15 +9,15 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/rusq/osenv/v2"
 	"github.com/rusq/vhoster"
 )
 
 var (
-	host    = flag.String("gateway-host", "localhost", "host to listen on")
-	port    = flag.String("gateway-port", "8081", "port to listen on")
-	pubAddr = flag.String("pub", "localhost:8081", "server public `hostname`, it is used as a suffix for all vhosts")
-
-	apiaddr = flag.String("api", "localhost:8083", "address of this api server that controls the gateway")
+	host    = flag.String("gateway-host", osenv.Value("GATEWAY_HOST", "localhost"), "host to listen on")
+	port    = flag.String("gateway-port", osenv.Value("GATEWAY_PORT", "8081"), "port to listen on")
+	pubAddr = flag.String("pub", osenv.Value("PUBLIC_ADDRESS", "localhost:8081"), "server public `hostname`, it is used as a suffix for all vhosts")
+	apiaddr = flag.String("api", osenv.Value("API_ADDRESS", "localhost:8083"), "address of this api server that controls the gateway")
 )
 
 func main() {
@@ -39,7 +39,8 @@ func main() {
 	mux.HandleFunc("/random/", Only(gateway.handleRandom, http.MethodPost))
 	mux.HandleFunc("/health/", Only(gateway.handleHealth, http.MethodGet))
 
-	log.Printf("listening on %s", *apiaddr)
+	log.Printf("Gateway: listening on %s:%s", *host, *port)
+	log.Printf("API: listening on %s", *apiaddr)
 	log.Fatal(http.ListenAndServe(*apiaddr, mux))
 }
 
