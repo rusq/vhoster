@@ -37,7 +37,7 @@ func (d *duration) UnmarshalJSON(b []byte) error {
 func (c Config) Hosts() ([]vhoster.Host, error) {
 	var hs []vhoster.Host
 	for i, h := range c.StrHosts {
-		vh, err := h.toVhost()
+		vh, err := h.toVhost(c.DomainName)
 		if err != nil {
 			return nil, fmt.Errorf("failed on host #%d: %w", i+1, err)
 		}
@@ -61,7 +61,7 @@ func (h Host) validate() error {
 	return nil
 }
 
-func (h Host) toVhost() (vhoster.Host, error) {
+func (h Host) toVhost(domain string) (vhoster.Host, error) {
 	if err := h.validate(); err != nil {
 		return vhoster.Host{}, err
 	}
@@ -70,7 +70,7 @@ func (h Host) toVhost() (vhoster.Host, error) {
 		return vhoster.Host{}, err
 	}
 	return vhoster.Host{
-		Name: h.Subdomain,
+		Name: h.Subdomain + "." + domain,
 		URI:  u,
 	}, nil
 }

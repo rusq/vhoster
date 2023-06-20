@@ -78,38 +78,47 @@ func (g *gateway) handleAdd(w http.ResponseWriter, r *http.Request) {
 	var req AddRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Print("error decoding body:", err)
-		w.WriteHeader(http.StatusBadRequest)
+		httpErr(w, http.StatusBadRequest)
 		return
 	}
 	g.processAdd(w, r, &req)
 }
 
+func httpErr(w http.ResponseWriter, code int) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	http.Error(w, http.StatusText(code), code)
+}
+
 func (g *gateway) processAdd(w http.ResponseWriter, r *http.Request, req *AddRequest) {
 	if req.Target == "" {
 		log.Print("empty target")
-		w.WriteHeader(http.StatusBadRequest)
+		httpErr(w, http.StatusBadRequest)
 		return
 	}
 	uri, err := url.Parse(req.Target)
 	if err != nil {
 		log.Print("error parsing the target hostname:", err)
-		w.WriteHeader(http.StatusNotAcceptable)
+		httpErr(w, http.StatusNotAcceptable)
 		return
 	}
 
 	vhost := req.HostPrefix + "." + g.addr
 	if _, err := url.Parse(vhost); err != nil {
 		log.Print("error parsing the resulting hostname:", err)
-		w.WriteHeader(http.StatusNotAcceptable)
+		httpErr(w, http.StatusNotAcceptable)
 		return
 	}
 	if err := g.vg.Add(vhost, uri); err != nil {
 		log.Print("error adding host:", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		httpErr(w, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(AddResponse{Hostname: vhost})
+	if err := json.NewEncoder(w).Encode(AddResponse{Hostname: vhost}); err != nil {
+		log.Print("error encoding response:", err)
+		httpErr(w, http.StatusInternalServerError)
+		return
+	}
 }
 
 type vhost struct {
@@ -153,14 +162,14 @@ func (g *gateway) handleRandom(w http.ResponseWriter, r *http.Request) {
 	var req RandomRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Print("error decoding body:", err)
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "error decoding body", http.StatusBadRequest)
 		return
 	}
 	g.processAdd(w, r, &AddRequest{HostPrefix: sVhost, Target: req.Target})
 }
 
 func (g *gateway) handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("OK"))
+	httpErr(w, http.StatusOK)
 }
 
 func (g *gateway) handleRemove(w http.ResponseWriter, r *http.Request) {
@@ -173,7 +182,8 @@ func (g *gateway) handleRemove(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := g.vg.Remove(vhost + "." + g.addr); err != nil {
 		log.Print("error removing host:", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "host does not exist", http.StatusNotFound)
 		return
 	}
+	httpErr(w, http.StatusOK)
 }
