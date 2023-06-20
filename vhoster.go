@@ -15,10 +15,8 @@ import (
 	"github.com/inconshreveable/go-vhost"
 )
 
-// Server is a virtual host reverse proxy server.
-type Server struct {
-	// Addr is the server address
-	Addr string
+// Gateway is a virtual host reverse proxy server.  Zero value is not usable.
+type Gateway struct {
 	ln   net.Listener // main listener
 	vhm  *vhost.HTTPMuxer
 	done chan struct{}
@@ -36,29 +34,68 @@ type Host struct {
 	URI *url.URL
 }
 
+// Option is a functional option for the server.
+type Option func(*options)
+
+type options struct {
+	timeout time.Duration
+	hosts   []Host
+}
+
+// WithTimeout sets the connection timeout to the virtual hosts.
+func WithTimeout(d time.Duration) Option {
+	return func(o *options) {
+		if d > 0 {
+			o.timeout = d
+		}
+	}
+}
+
+func WithHosts(hs []Host) Option {
+	return func(o *options) {
+		o.hosts = hs
+	}
+}
+
 // Listen initialises the server and starts listening on the given address.
-func Listen(addr string) (*Server, error) {
+func Listen(addr string, opts ...Option) (*Gateway, error) {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
-	vhm, err := vhost.NewHTTPMuxer(ln, 100*time.Millisecond)
+
+	o := &options{
+		timeout: 100 * time.Millisecond,
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	vhm, err := vhost.NewHTTPMuxer(ln, o.timeout)
 	if err != nil {
 		return nil, err
 	}
 	done := make(chan struct{})
-	go errorhandler(vhm, done)
-	return &Server{
-		Addr: addr,
+	g := &Gateway{
 		ln:   ln,
 		vhm:  vhm,
 		done: done,
 		pws:  make(map[string]proxyWrapper, 1),
 		wg:   new(sync.WaitGroup),
-	}, nil
+	}
+
+	// preconfigured hosts
+	for _, h := range o.hosts {
+		if err := g.Add(h.Name, h.URI); err != nil {
+			return nil, err
+		}
+	}
+
+	go errorhandler(vhm, done)
+	return g, nil
 }
 
-func (s *Server) Close() error {
+func (s *Gateway) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	defer close(s.done)
@@ -74,7 +111,7 @@ func (s *Server) Close() error {
 }
 
 // Add adds the virtual host to the server.
-func (s *Server) Add(vhost string, uri *url.URL) error {
+func (s *Gateway) Add(vhost string, uri *url.URL) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -112,7 +149,7 @@ func (s *Server) Add(vhost string, uri *url.URL) error {
 }
 
 // Remove removes the virtual host from the server.
-func (s *Server) Remove(vhost string) error {
+func (s *Gateway) Remove(vhost string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -125,7 +162,7 @@ func (s *Server) Remove(vhost string) error {
 }
 
 // Wait blocks until the server is closed.
-func (s *Server) Wait() {
+func (s *Gateway) Wait() {
 	<-s.done
 }
 
@@ -183,7 +220,7 @@ func handleError(conn net.Conn, err error) {
 	}
 }
 
-func (s *Server) List() []Host {
+func (s *Gateway) List() []Host {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

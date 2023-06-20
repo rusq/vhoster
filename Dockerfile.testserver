@@ -1,0 +1,18 @@
+FROM golang:1.20-alpine as stage
+
+RUN apk add --no-cache make
+
+WORKDIR /build
+COPY . .
+
+RUN make testserver
+
+FROM alpine:3.17
+
+RUN apk add --no-cache ca-certificates
+
+COPY --from=stage /build/testserver /usr/local/bin/testserver
+
+EXPOSE 8081
+
+ENTRYPOINT [ "testserver" ]

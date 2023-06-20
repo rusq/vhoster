@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+      - 8083:8083
+    environment:
+      - GATEWAY_ADDRESS=0.0.0.0:8080
+      - DOMAIN=localhost:8080
+      - API_ADDRESS=0.0.0.0:8083
+    expose:
+      - 8083
+      - 8080
+  
+  testserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.testserver
+    environment:
+      - TESTSERVER_HOST=0.0.0.0
+      - TESTSERVER_PORT=8082
+    expose:
+      - 8082

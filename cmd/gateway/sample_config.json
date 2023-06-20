@@ -1,0 +1,12 @@
+{
+	"gateway_address": "0.0.0.0:8080",
+	"api_address": "0.0.0.0:8083",
+	"domain_name": "localhost:8080",
+	"timeout": "100ms",
+	"hosts": [
+		{
+			"subdomain": "vhost",
+			"url": "http://localhost:8081"
+		}
+	]
+}
