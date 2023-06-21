@@ -25,9 +25,11 @@ func Test_parseCmdLine(t *testing.T) {
 				DomainName:     "example.com",
 				APIAddress:     "5.6.7.8:8083",
 				Timeout:        duration(100 * time.Millisecond),
-				StrHosts:       testCfg.StrHosts,
+				StrHosts: []Host{
+					{Subdomain: "vhost", URL: "http://localhost:8081"},
+				},
 			}
-			wantHosts, _ = testCfg.Hosts()
+			wantHosts, _ = wantConfig.Hosts()
 		)
 		assert.Equal(t, wantConfig, cfg)
 		assert.Equal(t, wantHosts, hosts)

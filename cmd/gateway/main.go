@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	addr    = flag.String("addr", osenv.Value("GATEWAY_ADDRESS", "localhost:8080"), "gateway address (host:port)")
-	pubAddr = flag.String("domain", osenv.Value("DOMAIN", "localhost:8080"), "server public domain `name`, it is used as a suffix for all vhosts, e.g. vhost1.public-hostname.com.  It must include custom port, if it uses one.")
-	apiaddr = flag.String("api", osenv.Value("API_ADDRESS", "localhost:8083"), "address of this api server that controls the gateway")
+	addr    = flag.String("addr", osenv.Value("GATEWAY_ADDRESS", ""), "gateway address (host:port)")
+	pubAddr = flag.String("domain", osenv.Value("DOMAIN", ""), "server public domain `name`, it is used as a suffix for all vhosts, e.g. vhost1.public-hostname.com.  It must include custom port, if it uses one.")
+	apiaddr = flag.String("api", osenv.Value("API_ADDRESS", ""), "address of this api server that controls the gateway")
 	config  = flag.String("c", osenv.Value("CONFIG", ""), "path to the optional config file in JSON format.")
 )
 
