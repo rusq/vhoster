@@ -121,13 +121,13 @@ func (g *gateway) processAdd(w http.ResponseWriter, r *http.Request, req *AddReq
 	}
 }
 
-type vhost struct {
+type ListHost struct {
 	Host string `json:"host,omitempty"`
 	URI  string `json:"uri,omitempty"`
 }
 
 type ListResponse struct {
-	Hosts []vhost
+	Hosts []ListHost
 }
 
 func (g *gateway) handleList(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +135,7 @@ func (g *gateway) handleList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var resp ListResponse
 	for _, h := range hosts {
-		resp.Hosts = append(resp.Hosts, vhost{Host: h.Name, URI: h.URI.String()})
+		resp.Hosts = append(resp.Hosts, ListHost{Host: h.Name, URI: h.URI.String()})
 	}
 	json.NewEncoder(w).Encode(resp)
 }
