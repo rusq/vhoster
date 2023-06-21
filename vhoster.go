@@ -148,6 +148,8 @@ func (s *Gateway) Add(vhost string, uri *url.URL) error {
 	return nil
 }
 
+var ErrNotFound = errors.New("vhost not found")
+
 // Remove removes the virtual host from the server.
 func (s *Gateway) Remove(vhost string) error {
 	s.mu.Lock()
@@ -155,7 +157,7 @@ func (s *Gateway) Remove(vhost string) error {
 
 	l, ok := s.pws[vhost]
 	if !ok {
-		return errors.New("vhost not found")
+		return ErrNotFound
 	}
 	delete(s.pws, vhost)
 	return l.Close()
@@ -180,10 +182,10 @@ func errorhandler(vm *vhost.HTTPMuxer, done <-chan struct{}) {
 		switch err.(type) {
 		case vhost.BadRequest:
 			log.Print("got a bad request!")
-			handleError(conn, errors.New("bad request"))
+			handleError(conn, http.StatusBadRequest, errors.New("bad request"))
 		case vhost.NotFound:
 			log.Printf("got a connection for an unknown vhost: %s", err)
-			handleError(conn, errors.New("vhost not found"))
+			handleError(conn, http.StatusNotFound, ErrNotFound)
 		case vhost.Closed:
 			log.Printf("closed conn: %s", err)
 		default:
@@ -195,7 +197,7 @@ func errorhandler(vm *vhost.HTTPMuxer, done <-chan struct{}) {
 			}
 			log.Printf("generic error (%[1]T): %[1]s,", err)
 			if conn != nil {
-				handleError(conn, errors.New("server error"))
+				handleError(conn, http.StatusInternalServerError, errors.New("server error"))
 			}
 		}
 		if conn != nil {
@@ -204,10 +206,13 @@ func errorhandler(vm *vhost.HTTPMuxer, done <-chan struct{}) {
 	}
 }
 
-func handleError(conn net.Conn, err error) {
+func handleError(conn net.Conn, code int, err error) {
 	// Create a new HTTP response object.
+	if code == 0 {
+		code = http.StatusInternalServerError
+	}
 	resp := &http.Response{
-		StatusCode: http.StatusInternalServerError, // TODO
+		StatusCode: code,
 		ProtoMajor: 1,
 		ProtoMinor: 1,
 		Header:     make(http.Header),
