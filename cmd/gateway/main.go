@@ -30,7 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 	go s.Wait()
-
+	log.Printf("gateway started on %s ; API adddress: %s", cfg.GatewayAddress, cfg.APIAddress)
 	log.Fatal(apiserver.Run(s, cfg.APIAddress, cfg.DomainName))
 }
 
