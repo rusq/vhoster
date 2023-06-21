@@ -6,7 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
 	"github.com/rusq/vhoster/apiserver"
+)
+
+var (
+	vhostsURL = &url.URL{Path: "/vhost/"}
 )
 
 type Client struct {
@@ -14,27 +19,36 @@ type Client struct {
 	cl   *http.Client
 }
 
-func NewClient(baseURL string, httpClient *http.Client) (*Client, error) {
+type Option func(*Client)
+
+func WithHTTPClient(cl *http.Client) Option {
+	return func(c *Client) {
+		c.cl = cl
+	}
+}
+
+func NewClient(baseURL string, opts ...Option) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
 	}
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
-	return &Client{base: u, cl: httpClient}, nil
-}
 
+	c := &Client{base: u, cl: http.DefaultClient}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c, nil
+}
 
 func (c *Client) Add(hostPrefix, target string) (string, error) {
 	reqBody, err := json.Marshal(apiserver.AddRequest{
 		HostPrefix: hostPrefix,
-		Target: target,
+		Target:     target,
 	})
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest(http.MethodPost, c.base.String()+"/vhost/", bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest(http.MethodPost, c.base.ResolveReference(vhostsURL).String(), bytes.NewBuffer(reqBody))
 	if err != nil {
 		return "", err
 	}
@@ -47,7 +61,7 @@ func (c *Client) Add(hostPrefix, target string) (string, error) {
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
-	
+
 	var addResp apiserver.AddResponse
 	if err := json.NewDecoder(resp.Body).Decode(&addResp); err != nil {
 		return "", err
@@ -56,7 +70,8 @@ func (c *Client) Add(hostPrefix, target string) (string, error) {
 }
 
 func (c *Client) Remove(hostname string) error {
-	req, err := http.NewRequest(http.MethodDelete, c.base.String()+"/vhost/"+hostname, nil)
+	url := &url.URL{Path: "/vhost/" + hostname}
+	req, err := http.NewRequest(http.MethodDelete, c.base.ResolveReference(url).String(), nil)
 	if err != nil {
 		return err
 	}
@@ -72,7 +87,7 @@ func (c *Client) Remove(hostname string) error {
 }
 
 func (c *Client) List() ([]apiserver.ListHost, error) {
-	req, err := http.NewRequest(http.MethodGet, c.base.String()+"/vhost/", nil)
+	req, err := http.NewRequest(http.MethodGet, c.base.ResolveReference(vhostsURL).String(), nil)
 	if err != nil {
 		return nil, err
 	}
