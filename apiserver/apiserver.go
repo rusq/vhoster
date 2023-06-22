@@ -127,6 +127,10 @@ type ListHost struct {
 	URI  string `json:"uri,omitempty"`
 }
 
+func (g *gateway) withDomain(hostprefix string) string {
+	return hostprefix + "." + g.addr
+}
+
 func (g *gateway) handleList(w http.ResponseWriter, r *http.Request) {
 	vHost := vhostName(r)
 	hosts := g.vg.List()
@@ -134,8 +138,9 @@ func (g *gateway) handleList(w http.ResponseWriter, r *http.Request) {
 		g.listHosts(w, hosts)
 		return
 	}
+	fullName := g.withDomain(vHost)
 	for _, h := range hosts {
-		if h.Name == vHost {
+		if h.Name == fullName || h.Name == vHost {
 			g.listHosts(w, []vhoster.Host{h})
 			return
 		}
