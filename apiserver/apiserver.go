@@ -27,6 +27,7 @@ func (g *gateway) handler() http.Handler {
 	return mux
 }
 
+//go:generate mockgen -destination=../mocks/mock_hostmanager.go -package=mocks github.com/rusq/vhoster/apiserver HostManager
 type HostManager interface {
 	Add(string, *url.URL) error
 	Remove(string) error
@@ -126,12 +127,29 @@ type ListHost struct {
 	URI  string `json:"uri,omitempty"`
 }
 
+func (g *gateway) handleList(w http.ResponseWriter, r *http.Request) {
+	vHost := vhostName(r)
+	hosts := g.vg.List()
+	if vHost == "" {
+		g.listHosts(w, hosts)
+		return
+	}
+	for _, h := range hosts {
+		if h.Name == vHost {
+			g.listHosts(w, []vhoster.Host{h})
+			return
+		}
+	}
+	http.NotFound(w, r)
+}
+
+// ListResponse is a response for the list request.
 type ListResponse struct {
 	Hosts []ListHost
 }
 
-func (g *gateway) handleList(w http.ResponseWriter, r *http.Request) {
-	hosts := g.vg.List()
+// listHosts encodes the list of hosts to the response.
+func (g *gateway) listHosts(w http.ResponseWriter, hosts []vhoster.Host) {
 	w.Header().Set("Content-Type", "application/json")
 	var resp ListResponse
 	for _, h := range hosts {
@@ -154,27 +172,36 @@ func (g *gateway) handleRandom(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// generate a random uuid without using external libs
-	baVhost := [16]byte{}
-	for i := 0; i < 16; i++ {
-		baVhost[i] = byte(rand.Intn(256))
-	}
-	sVhost := hex.EncodeToString(baVhost[:])
+	h := randString(16)
 	var req RandomRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Print("error decoding body:", err)
 		http.Error(w, "error decoding body", http.StatusBadRequest)
 		return
 	}
-	g.processAdd(w, r, &AddRequest{HostPrefix: sVhost, Target: req.Target})
+	g.processAdd(w, r, &AddRequest{HostPrefix: h, Target: req.Target})
 }
 
-func (g *gateway) handleHealth(w http.ResponseWriter, r *http.Request) {
+var randString = func(n int) string {
+	b := make([]byte, n)
+	for i := 0; i < n; i++ {
+		b[i] = byte(rand.Intn(256))
+	}
+
+	return hex.EncodeToString(b[:])
+}
+
+func (g *gateway) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	httpErr(w, http.StatusOK)
+}
+
+func vhostName(r *http.Request) string {
+	return r.URL.Path[len("/vhost/"):]
 }
 
 func (g *gateway) handleRemove(w http.ResponseWriter, r *http.Request) {
 	// remove
-	vhost := r.URL.Path[len("/vhost/"):]
+	vhost := vhostName(r)
 	if vhost == "" {
 		log.Print("got empty vhost")
 		w.WriteHeader(http.StatusBadRequest)
