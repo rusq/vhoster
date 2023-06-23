@@ -21,6 +21,19 @@ type Config struct {
 	StrHosts       []Host   `json:"hosts,omitempty"`
 }
 
+func (c *Config) validate() error {
+	if c.GatewayAddress == "" {
+		return errors.New("gateway address is empty")
+	}
+	if c.DomainName == "" {
+		return errors.New("domain name is empty")
+	}
+	if c.APIAddress == "" {
+		return errors.New("api address is empty")
+	}
+	return nil
+}
+
 func (d *duration) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {

@@ -193,7 +193,7 @@ var randString = func(n int) string {
 		b[i] = byte(rand.Intn(256))
 	}
 
-	return hex.EncodeToString(b[:])
+	return hex.EncodeToString(b)
 }
 
 func (g *gateway) handleHealth(w http.ResponseWriter, _ *http.Request) {

@@ -10,8 +10,11 @@ import (
 	"github.com/rusq/vhoster/apiserver"
 )
 
+var ErrNotFound = fmt.Errorf("not found")
+
 var (
-	vhostsURL = &url.URL{Path: "/vhost/"}
+	epVhosts = &url.URL{Path: "/vhost/"}
+	epRandom = &url.URL{Path: "/random/"}
 )
 
 func rVhostPath(name string) *url.URL {
@@ -52,7 +55,7 @@ func (c *Client) Add(hostPrefix, target string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest(http.MethodPost, c.base.ResolveReference(vhostsURL).String(), bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest(http.MethodPost, c.base.ResolveReference(epVhosts).String(), bytes.NewBuffer(reqBody))
 	if err != nil {
 		return "", err
 	}
@@ -62,6 +65,20 @@ func (c *Client) Add(hostPrefix, target string) (string, error) {
 		return "", err
 	}
 	return addResp.Hostname, nil
+}
+
+// Random calls the /random endpoint of the server and returns a random
+// hostname.
+func (c *Client) Random() (string, error) {
+	req, err := http.NewRequest(http.MethodGet, c.base.ResolveReference(epRandom).String(), nil)
+	if err != nil {
+		return "", err
+	}
+	var randomResp apiserver.RandomResponse
+	if err := do(&randomResp, c.cl, req); err != nil {
+		return "", err
+	}
+	return randomResp.Hostname, nil
 }
 
 func (c *Client) Remove(hostname string) error {
@@ -82,7 +99,7 @@ func (c *Client) Remove(hostname string) error {
 }
 
 func (c *Client) List() ([]apiserver.ListHost, error) {
-	req, err := http.NewRequest(http.MethodGet, c.base.ResolveReference(vhostsURL).String(), nil)
+	req, err := http.NewRequest(http.MethodGet, c.base.ResolveReference(epVhosts).String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +109,6 @@ func (c *Client) List() ([]apiserver.ListHost, error) {
 	}
 	return listResp.Hosts, nil
 }
-
-var ErrNotFound = fmt.Errorf("not found")
 
 func (c *Client) ListHost(prefix string) (*apiserver.ListHost, error) {
 	listHost := rVhostPath(prefix)
