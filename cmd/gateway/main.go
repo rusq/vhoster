@@ -38,7 +38,7 @@ func parseCmdLine() (*Config, []vhoster.Host, error) {
 	var cfg = Config{}
 	if *config != "" {
 		if err := loadConfig(*config, &cfg); err != nil {
-			log.Fatal(err)
+			return nil, nil, err
 		}
 	}
 	// override config with command line flags.
@@ -48,10 +48,13 @@ func parseCmdLine() (*Config, []vhoster.Host, error) {
 	if cfg.Timeout == 0 {
 		cfg.Timeout = duration(5 * time.Second)
 	}
+	if err := cfg.validate(); err != nil {
+		return nil, nil, err
+	}
 
 	hosts, err := cfg.Hosts()
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
 	return &cfg, hosts, nil
 }
