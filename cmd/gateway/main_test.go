@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rusq/vhoster"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,10 +13,10 @@ func Test_parseCmdLine(t *testing.T) {
 		// setting command line parameters
 		addr = ptr("1.2.3.4:8080")
 		apiaddr = ptr("5.6.7.8:8083")
-		pubAddr = ptr("example.com")
+		domainName = ptr("example.com")
 		config = ptr(writeConfig(t, testConfigJSON))
 
-		cfg, hosts, err := parseCmdLine()
+		cfg, err := parseCmdLine()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -25,14 +26,12 @@ func Test_parseCmdLine(t *testing.T) {
 				DomainName:     "example.com",
 				APIAddress:     "5.6.7.8:8083",
 				Timeout:        duration(100 * time.Millisecond),
-				StrHosts: []Host{
-					{Subdomain: "vhost", URL: "http://localhost:8081"},
+				Hosts: []vhoster.Host{
+					{Name: "vhost.example.com", URI: mustParse("http://localhost:8081")}, // vhost name should have the updated domain name.
 				},
 			}
-			wantHosts, _ = wantConfig.Hosts()
 		)
 		assert.Equal(t, wantConfig, cfg)
-		assert.Equal(t, wantHosts, hosts)
 	})
 }
 

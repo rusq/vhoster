@@ -11,21 +11,21 @@ import (
 )
 
 var (
-	addr    = flag.String("addr", osenv.Value("GATEWAY_ADDRESS", ""), "gateway address (host:port)")
-	pubAddr = flag.String("domain", osenv.Value("DOMAIN", ""), "server public domain `name`, it is used as a suffix for all vhosts, e.g. vhost1.public-hostname.com.  It must include custom port, if it uses one.")
-	apiaddr = flag.String("api", osenv.Value("API_ADDRESS", ""), "address of this api server that controls the gateway")
-	config  = flag.String("c", osenv.Value("CONFIG", ""), "path to the optional config file in JSON format.")
+	addr       = flag.String("addr", osenv.Value("GATEWAY_ADDRESS", ""), "gateway address (host:port)")
+	domainName = flag.String("domain", osenv.Value("DOMAIN", ""), "server public domain `name`, it is used as a suffix for all vhosts, e.g. vhost1.public-hostname.com.  It must include custom port, if it uses one.")
+	apiaddr    = flag.String("api", osenv.Value("API_ADDRESS", ""), "address of this api server that controls the gateway")
+	config     = flag.String("c", osenv.Value("CONFIG", ""), "path to the optional config file in JSON format.")
 )
 
 func main() {
 	flag.Parse()
 
-	cfg, hosts, err := parseCmdLine()
+	cfg, err := parseCmdLine()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	s, err := vhoster.Listen(cfg.GatewayAddress, vhoster.WithHosts(hosts), vhoster.WithTimeout(time.Duration(cfg.Timeout)))
+	s, err := vhoster.Listen(cfg.GatewayAddress, vhoster.WithHosts(cfg.Hosts), vhoster.WithTimeout(time.Duration(cfg.Timeout)))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,29 +34,28 @@ func main() {
 	log.Fatal(apiserver.Run(s, cfg.APIAddress, cfg.DomainName))
 }
 
-func parseCmdLine() (*Config, []vhoster.Host, error) {
+func parseCmdLine() (*Config, error) {
 	var cfg = Config{}
 	if *config != "" {
 		if err := loadConfig(*config, &cfg); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 	// override config with command line flags.
 	cfg.GatewayAddress = coalesce(*addr, cfg.GatewayAddress)
 	cfg.APIAddress = coalesce(*apiaddr, cfg.APIAddress)
-	cfg.DomainName = coalesce(*pubAddr, cfg.DomainName)
+	cfg.DomainName = coalesce(*domainName, cfg.DomainName)
 	if cfg.Timeout == 0 {
 		cfg.Timeout = duration(5 * time.Second)
 	}
 	if err := cfg.validate(); err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+	for i, h := range cfg.Hosts {
+		cfg.Hosts[i].Name = h.Name + "." + cfg.DomainName
 	}
 
-	hosts, err := cfg.Hosts()
-	if err != nil {
-		return nil, nil, err
-	}
-	return &cfg, hosts, nil
+	return &cfg, nil
 }
 
 func coalesce(a, b string) string {
