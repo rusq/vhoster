@@ -56,7 +56,7 @@ func (c *Client) Add(hostPrefix, target string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest(http.MethodPost, c.base.ResolveReference(epVhosts).String(), bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest(http.MethodPost, c.base.ResolveReference(epVhosts).String(), bytes.NewReader(reqBody))
 	if err != nil {
 		return "", err
 	}
@@ -70,8 +70,14 @@ func (c *Client) Add(hostPrefix, target string) (string, error) {
 
 // Random calls the /random endpoint of the server and returns a random
 // hostname.
-func (c *Client) Random() (string, error) {
-	req, err := http.NewRequest(http.MethodGet, c.base.ResolveReference(epRandom).String(), nil)
+func (c *Client) Random(target string) (string, error) {
+	reqBody, err := json.Marshal(apiserver.RandomRequest{
+		Target: target,
+	})
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequest(http.MethodGet, c.base.ResolveReference(epRandom).String(), bytes.NewReader(reqBody))
 	if err != nil {
 		return "", err
 	}
@@ -152,7 +158,7 @@ func (c *Client) Replace(hostPrefix, target string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest(http.MethodPatch, c.base.ResolveReference(epVhosts).String(), bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest(http.MethodPatch, c.base.ResolveReference(epVhosts).String(), bytes.NewReader(reqBody))
 	if err != nil {
 		return "", err
 	}
