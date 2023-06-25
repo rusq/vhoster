@@ -35,7 +35,7 @@ func WithHTTPClient(cl *http.Client) Option {
 	}
 }
 
-func NewClient(baseURL string, opts ...Option) (*Client, error) {
+func New(baseURL string, opts ...Option) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
@@ -142,4 +142,24 @@ func do[T any](ret *T, cl *http.Client, r *http.Request) error {
 		return err
 	}
 	return nil
+}
+
+func (c *Client) Replace(hostPrefix, target string) (string, error) {
+	reqBody, err := json.Marshal(apiserver.ReplaceRequest{
+		HostPrefix: hostPrefix,
+		Target:     target,
+	})
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequest(http.MethodPatch, c.base.ResolveReference(epVhosts).String(), bytes.NewBuffer(reqBody))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	var updResp apiserver.ReplaceResponse
+	if err := do(&updResp, c.cl, req); err != nil {
+		return "", err
+	}
+	return updResp.Hostname, nil
 }
