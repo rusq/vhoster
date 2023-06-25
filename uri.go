@@ -2,8 +2,8 @@ package vhoster
 
 import "net/url"
 
-// URI is a wrapper around [pkg/net/url.URL] that implements json.Marshaler and
-// json.Unmarshaler.
+// URI is a wrapper around [pkg/net/url.URL] that implements custom
+// json.Marshaler and json.Unmarshaler.
 type URI url.URL
 
 // convenience functions

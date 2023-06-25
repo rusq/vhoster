@@ -15,6 +15,13 @@ import (
 	"github.com/inconshreveable/go-vhost"
 )
 
+var (
+	// ErrNotFound is returned when a virtual host is not found.
+	ErrNotFound = errors.New("vhost not found")
+	// ErrAlreadyExists is returned when a virtual host already exists.
+	ErrAlreadyExists = errors.New("vhost address already in use")
+)
+
 // Gateway is a virtual host reverse proxy server.  Zero value is not usable.
 type Gateway struct {
 	ln   net.Listener // main listener
@@ -47,6 +54,7 @@ func (h Host) Validate() error {
 // Option is a functional option for the server.
 type Option func(*options)
 
+// options is a set of options for the server.
 type options struct {
 	timeout time.Duration
 	hosts   []Host
@@ -61,6 +69,7 @@ func WithTimeout(d time.Duration) Option {
 	}
 }
 
+// WithHosts sets the preconfigured hosts.
 func WithHosts(hs []Host) Option {
 	return func(o *options) {
 		o.hosts = hs
@@ -119,8 +128,6 @@ func (g *Gateway) Close() error {
 	g.vhm.Close()
 	return g.ln.Close()
 }
-
-var ErrAlreadyExists = errors.New("vhost address already in use")
 
 // wrapAlreadyBound wraps the error returned by the vhost manager when the
 // address is already in use.  This is a workaround until
@@ -183,8 +190,6 @@ func (g *Gateway) Replace(vhost string, uri *url.URL) error {
 	}
 	return g.Add(vhost, uri)
 }
-
-var ErrNotFound = errors.New("vhost not found")
 
 // Remove removes the virtual host from the server.
 func (g *Gateway) Remove(vhost string) error {
@@ -260,6 +265,7 @@ func errorhandler(vm *vhost.HTTPMuxer, done <-chan struct{}) {
 	}
 }
 
+// handleError writes an HTTP error response to the connection.
 func handleError(conn net.Conn, code int, err error) {
 	// Create a new HTTP response object.
 	if code == 0 {
@@ -279,6 +285,7 @@ func handleError(conn net.Conn, code int, err error) {
 	}
 }
 
+// List returns the list of virtual hosts.
 func (s *Gateway) List() []Host {
 	s.mu.Lock()
 	defer s.mu.Unlock()
