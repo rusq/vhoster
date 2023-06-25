@@ -37,7 +37,7 @@ func TestClient_Add(t *testing.T) {
 	defer ts.Close()
 
 	// Create a client with the test server URL
-	client, err := NewClient(ts.URL)
+	client, err := New(ts.URL)
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestClient_Remove(t *testing.T) {
 	defer ts.Close()
 
 	// Create a client with the test server URL
-	client, err := NewClient(ts.URL)
+	client, err := New(ts.URL)
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestClient_List(t *testing.T) {
 	defer ts.Close()
 
 	// Create a client with the test server URL
-	client, err := NewClient(ts.URL)
+	client, err := New(ts.URL)
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}

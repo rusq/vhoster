@@ -22,7 +22,7 @@ func Run(vg HostManager, apiAddr, pubAddr string) error {
 
 func (g *gateway) handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/vhost/", Only(g.handleVhost, http.MethodPost, http.MethodDelete, http.MethodGet))
+	mux.HandleFunc("/vhost/", Only(g.handleVhost, http.MethodPost, http.MethodDelete, http.MethodGet, http.MethodPatch))
 	mux.HandleFunc("/random/", Only(g.handleRandom, http.MethodPost))
 	mux.HandleFunc("/health/", Only(g.handleHealth, http.MethodGet))
 	return mux
@@ -69,7 +69,7 @@ func (g *gateway) handleVhost(w http.ResponseWriter, r *http.Request) {
 		g.handleAdd(w, r)
 	case http.MethodPatch:
 		// update
-		g.handleUpdate(w, r)
+		g.handleReplace(w, r)
 	case http.MethodDelete:
 		// delete
 		g.handleRemove(w, r)
@@ -95,13 +95,13 @@ func (g *gateway) handleAdd(w http.ResponseWriter, r *http.Request) {
 	g.process(w, r, &req, g.vg.Add)
 }
 
-type UpdateRequest AddRequest
+type ReplaceRequest AddRequest
 
-type UpdateResponse AddResponse
+type ReplaceResponse AddResponse
 
-func (g *gateway) handleUpdate(w http.ResponseWriter, r *http.Request) {
+func (g *gateway) handleReplace(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var req UpdateRequest
+	var req ReplaceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Print("error decoding body:", err)
 		httpErr(w, http.StatusBadRequest)

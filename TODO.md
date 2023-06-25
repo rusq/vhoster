@@ -7,7 +7,7 @@
 
 ## Server
 - [ ] API authentication
-- [ ] PATCH method to update a vhost information
+- [x] PATCH method to update a vhost information
 - [ ] Tests
 
 ## Client
