@@ -1,7 +1,6 @@
 package apiserver
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,6 +28,8 @@ func TestHandleRemove(t *testing.T) {
 			name:  "success",
 			vhost: "test",
 			mockFn: func(mc *mocks.MockHostManager) {
+				mc.EXPECT().Exists("test").Return(false)
+				mc.EXPECT().Exists("test.example.com").Return(true)
 				mc.EXPECT().Remove("test.example.com").Return(nil)
 			},
 			statusCode: http.StatusOK,
@@ -43,7 +44,8 @@ func TestHandleRemove(t *testing.T) {
 			name:  "not found",
 			vhost: "test",
 			mockFn: func(mc *mocks.MockHostManager) {
-				mc.EXPECT().Remove("test.example.com").Return(errors.New("host does not exist"))
+				mc.EXPECT().Exists("test").Return(false)
+				mc.EXPECT().Exists("test.example.com").Return(false)
 			},
 			statusCode: http.StatusNotFound,
 		},

@@ -34,6 +34,7 @@ type HostManager interface {
 	Remove(string) error
 	Replace(string, *url.URL) error
 	List() []vhoster.Host
+	Exists(string) bool
 }
 
 type gateway struct {
@@ -79,7 +80,7 @@ func (g *gateway) handleVhost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func httpErr(w http.ResponseWriter, code int) {
+func httStatus(w http.ResponseWriter, code int) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	http.Error(w, http.StatusText(code), code)
 }
@@ -89,7 +90,7 @@ func (g *gateway) handleAdd(w http.ResponseWriter, r *http.Request) {
 	var req AddRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Print("error decoding body:", err)
-		httpErr(w, http.StatusBadRequest)
+		httStatus(w, http.StatusBadRequest)
 		return
 	}
 	g.process(w, r, &req, g.vg.Add)
@@ -104,7 +105,7 @@ func (g *gateway) handleReplace(w http.ResponseWriter, r *http.Request) {
 	var req ReplaceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Print("error decoding body:", err)
-		httpErr(w, http.StatusBadRequest)
+		httStatus(w, http.StatusBadRequest)
 		return
 	}
 	g.process(w, r, (*AddRequest)(&req), g.vg.Replace)
@@ -135,13 +136,13 @@ func (g *gateway) process(w http.ResponseWriter, r *http.Request, req *AddReques
 			http.Error(w, "409 host already exists", http.StatusConflict)
 			return
 		}
-		httpErr(w, http.StatusInternalServerError)
+		httStatus(w, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(AddResponse{Hostname: vhost}); err != nil {
 		log.Printf("error encoding response for vhost %q: %s", vhost, err)
-		httpErr(w, http.StatusInternalServerError)
+		httStatus(w, http.StatusInternalServerError)
 		return
 	}
 }
@@ -215,7 +216,7 @@ var randString = func(n int) string {
 }
 
 func (g *gateway) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	httpErr(w, http.StatusOK)
+	httStatus(w, http.StatusOK)
 }
 
 func vhostName(r *http.Request) string {
@@ -230,20 +231,18 @@ func (g *gateway) handleRemove(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if err := g.vg.Remove(vhost); err != nil {
-		if errors.Is(err, vhoster.ErrNotFound) {
-			// attempt to remove by prefix
-			log.Printf("host %q does not exist, assuming prefix", vhost)
-			if err := g.vg.Remove(vhost + "." + g.addr); err != nil {
-				log.Print("error removing host:", err)
-			}
-		} else {
-			log.Print("error removing host:", err)
-			httpErr(w, http.StatusInternalServerError)
-			return
-		}
+	var err error
+	if g.vg.Exists(vhost) {
+		err = g.vg.Remove(vhost)
+	} else if g.vg.Exists(vhost + "." + g.addr) {
+		err = g.vg.Remove(vhost + "." + g.addr)
+	} else {
+		err = vhoster.ErrNotFound
+	}
+	if err != nil {
+		log.Print("error removing host:", err)
 		http.Error(w, "host does not exist", http.StatusNotFound)
 		return
 	}
-	httpErr(w, http.StatusOK)
+	httStatus(w, http.StatusOK)
 }
