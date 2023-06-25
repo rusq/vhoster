@@ -49,6 +49,20 @@ func (mr *MockHostManagerMockRecorder) Add(arg0, arg1 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockHostManager)(nil).Add), arg0, arg1)
 }
 
+// Exists mocks base method.
+func (m *MockHostManager) Exists(arg0 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Exists", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Exists indicates an expected call of Exists.
+func (mr *MockHostManagerMockRecorder) Exists(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockHostManager)(nil).Exists), arg0)
+}
+
 // List mocks base method.
 func (m *MockHostManager) List() []vhoster.Host {
 	m.ctrl.T.Helper()

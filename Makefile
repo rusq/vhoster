@@ -23,7 +23,7 @@ push: docker
 	docker push $(REPO):$(TAG_LATEST)
 .PHONY: push
 
-push-stable: docker
+push-stable: push
 	docker tag $(REPO):$(TAG_LATEST) $(REPO):$(VERSION)
 	docker push $(REPO):$(VERSION)
 .PHONY: push-stable

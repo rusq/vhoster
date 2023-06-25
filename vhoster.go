@@ -191,6 +191,14 @@ func (g *Gateway) Replace(vhost string, uri *url.URL) error {
 	return g.Add(vhost, uri)
 }
 
+// Exists returns true if the virtual host exists.
+func (g *Gateway) Exists(vhost string) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	_, ok := g.pws[vhost]
+	return ok
+}
+
 // Remove removes the virtual host from the server.
 func (g *Gateway) Remove(vhost string) error {
 	g.mu.Lock()
