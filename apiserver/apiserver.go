@@ -230,8 +230,18 @@ func (g *gateway) handleRemove(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if err := g.vg.Remove(vhost + "." + g.addr); err != nil {
-		log.Print("error removing host:", err)
+	if err := g.vg.Remove(vhost); err != nil {
+		if errors.Is(err, vhoster.ErrNotFound) {
+			// attempt to remove by prefix
+			log.Printf("host %q does not exist, assuming prefix", vhost)
+			if err := g.vg.Remove(vhost + "." + g.addr); err != nil {
+				log.Print("error removing host:", err)
+			}
+		} else {
+			log.Print("error removing host:", err)
+			httpErr(w, http.StatusInternalServerError)
+			return
+		}
 		http.Error(w, "host does not exist", http.StatusNotFound)
 		return
 	}
