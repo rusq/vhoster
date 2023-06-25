@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -71,13 +72,16 @@ func (c *Client) Add(hostPrefix, target string) (string, error) {
 // Random calls the /random endpoint of the server and returns a random
 // hostname.
 func (c *Client) Random(target string) (string, error) {
+	if target == "" {
+		return "", errors.New("empty target")
+	}
 	reqBody, err := json.Marshal(apiserver.RandomRequest{
 		Target: target,
 	})
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest(http.MethodGet, c.base.ResolveReference(epRandom).String(), bytes.NewReader(reqBody))
+	req, err := http.NewRequest(http.MethodPost, c.base.ResolveReference(epRandom).String(), bytes.NewReader(reqBody))
 	if err != nil {
 		return "", err
 	}
