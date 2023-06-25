@@ -59,7 +59,8 @@ func Only(h http.HandlerFunc, methods ...string) http.HandlerFunc {
 				return
 			}
 		}
-		w.WriteHeader(http.StatusBadRequest)
+		log.Printf("method %q not allowed on: %s", r.Method, r.URL.Path)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}
 }
 
