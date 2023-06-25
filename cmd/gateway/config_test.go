@@ -1,10 +1,12 @@
 package main
 
 import (
+	"net/url"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/rusq/vhoster"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,20 +18,28 @@ const testConfigJSON = `
 	"timeout": "100ms",
 	"hosts": [
 		{
-			"subdomain": "vhost",
-			"url": "http://localhost:8081"
+			"name": "vhost",
+			"uri": "http://localhost:8081"
 		}
 	]
 }
 `
+
+func mustParse(s string) *vhoster.URI {
+	uri, err := url.Parse(s)
+	if err != nil {
+		panic(err)
+	}
+	return vhoster.ToURI(uri)
+}
 
 var testCfg = &Config{
 	GatewayAddress: "0.0.0.0:8080",
 	DomainName:     "localhost:8080",
 	APIAddress:     "0.0.0.0:8083",
 	Timeout:        duration(100 * time.Millisecond),
-	StrHosts: []Host{
-		{Subdomain: "vhost", URL: "http://localhost:8081"},
+	Hosts: []vhoster.Host{
+		{Name: "vhost", URI: mustParse("http://localhost:8081")},
 	},
 }
 

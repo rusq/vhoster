@@ -3,6 +3,7 @@ package apiserver
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"log"
 	"math/rand"
 	"net/http"
@@ -31,6 +32,7 @@ func (g *gateway) handler() http.Handler {
 type HostManager interface {
 	Add(string, *url.URL) error
 	Remove(string) error
+	Replace(string, *url.URL) error
 	List() []vhoster.Host
 }
 
@@ -65,6 +67,9 @@ func (g *gateway) handleVhost(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		// create
 		g.handleAdd(w, r)
+	case http.MethodPatch:
+		// update
+		g.handleUpdate(w, r)
 	case http.MethodDelete:
 		// delete
 		g.handleRemove(w, r)
@@ -72,6 +77,11 @@ func (g *gateway) handleVhost(w http.ResponseWriter, r *http.Request) {
 		// list
 		g.handleList(w, r)
 	}
+}
+
+func httpErr(w http.ResponseWriter, code int) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	http.Error(w, http.StatusText(code), code)
 }
 
 func (g *gateway) handleAdd(w http.ResponseWriter, r *http.Request) {
@@ -82,49 +92,58 @@ func (g *gateway) handleAdd(w http.ResponseWriter, r *http.Request) {
 		httpErr(w, http.StatusBadRequest)
 		return
 	}
-	g.processAdd(w, r, &req)
+	g.process(w, r, &req, g.vg.Add)
 }
 
-func httpErr(w http.ResponseWriter, code int) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	http.Error(w, http.StatusText(code), code)
-}
+type UpdateRequest AddRequest
 
-func (g *gateway) processAdd(w http.ResponseWriter, r *http.Request, req *AddRequest) {
-	if req.Target == "" {
-		log.Print("empty target")
+type UpdateResponse AddResponse
+
+func (g *gateway) handleUpdate(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	var req UpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Print("error decoding body:", err)
 		httpErr(w, http.StatusBadRequest)
+		return
+	}
+	g.process(w, r, (*AddRequest)(&req), g.vg.Replace)
+}
+
+func (g *gateway) process(w http.ResponseWriter, r *http.Request, req *AddRequest, fn func(string, *url.URL) error) {
+	if req.Target == "" {
+		log.Print("missing target")
+		http.Error(w, "400 missing target", http.StatusBadRequest)
 		return
 	}
 	uri, err := url.Parse(req.Target)
 	if err != nil {
 		log.Print("error parsing the target hostname:", err)
-		httpErr(w, http.StatusNotAcceptable)
+		http.Error(w, "400 invalid target", http.StatusBadRequest)
 		return
 	}
 
-	vhost := req.HostPrefix + "." + g.addr
+	vhost := g.withDomain(req.HostPrefix)
 	if _, err := url.Parse(vhost); err != nil {
-		log.Print("error parsing the resulting hostname:", err)
-		httpErr(w, http.StatusNotAcceptable)
+		log.Printf("error parsing the resulting hostname %q: %s", vhost, err)
+		http.Error(w, "400 invalid host prefix", http.StatusBadRequest)
 		return
 	}
-	if err := g.vg.Add(vhost, uri); err != nil {
-		log.Print("error adding host:", err)
+	if err := fn(vhost, uri); err != nil {
+		log.Printf("error adding host %q: %s", vhost, err)
+		if errors.Is(err, vhoster.ErrAlreadyExists) {
+			http.Error(w, "409 host already exists", http.StatusConflict)
+			return
+		}
 		httpErr(w, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(AddResponse{Hostname: vhost}); err != nil {
-		log.Print("error encoding response:", err)
+		log.Printf("error encoding response for vhost %q: %s", vhost, err)
 		httpErr(w, http.StatusInternalServerError)
 		return
 	}
-}
-
-type ListHost struct {
-	Host string `json:"host,omitempty"`
-	URI  string `json:"uri,omitempty"`
 }
 
 func (g *gateway) withDomain(hostprefix string) string {
@@ -150,15 +169,14 @@ func (g *gateway) handleList(w http.ResponseWriter, r *http.Request) {
 
 // ListResponse is a response for the list request.
 type ListResponse struct {
-	Hosts []ListHost
+	Hosts []vhoster.Host `json:"hosts,omitempty"`
 }
 
 // listHosts encodes the list of hosts to the response.
 func (g *gateway) listHosts(w http.ResponseWriter, hosts []vhoster.Host) {
 	w.Header().Set("Content-Type", "application/json")
-	var resp ListResponse
-	for _, h := range hosts {
-		resp.Hosts = append(resp.Hosts, ListHost{Host: h.Name, URI: h.URI.String()})
+	var resp = ListResponse{
+		Hosts: hosts,
 	}
 	json.NewEncoder(w).Encode(resp)
 }
@@ -184,7 +202,7 @@ func (g *gateway) handleRandom(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error decoding body", http.StatusBadRequest)
 		return
 	}
-	g.processAdd(w, r, &AddRequest{HostPrefix: h, Target: req.Target})
+	g.process(w, r, &AddRequest{HostPrefix: h, Target: req.Target}, g.vg.Add)
 }
 
 var randString = func(n int) string {

@@ -5,8 +5,8 @@
 	"timeout": "100ms",
 	"hosts": [
 		{
-			"subdomain": "test",
-			"url": "http://testserver:8082"
+			"name": "test",
+			"uri": "http://testserver:8082"
 		}
 	]
 }

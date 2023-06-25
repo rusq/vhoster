@@ -5,7 +5,7 @@ RUN apk add --no-cache make
 WORKDIR /build
 COPY . .
 
-RUN make gateway
+RUN make test gateway
 
 FROM alpine:3.17
 

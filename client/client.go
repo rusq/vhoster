@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/rusq/vhoster"
 	"github.com/rusq/vhoster/apiserver"
 )
 
@@ -98,7 +99,7 @@ func (c *Client) Remove(hostname string) error {
 	return nil
 }
 
-func (c *Client) List() ([]apiserver.ListHost, error) {
+func (c *Client) List() ([]vhoster.Host, error) {
 	req, err := http.NewRequest(http.MethodGet, c.base.ResolveReference(epVhosts).String(), nil)
 	if err != nil {
 		return nil, err
@@ -110,7 +111,7 @@ func (c *Client) List() ([]apiserver.ListHost, error) {
 	return listResp.Hosts, nil
 }
 
-func (c *Client) ListHost(prefix string) (*apiserver.ListHost, error) {
+func (c *Client) ListHost(prefix string) (*vhoster.Host, error) {
 	listHost := rVhostPath(prefix)
 	req, err := http.NewRequest(http.MethodGet, c.base.ResolveReference(listHost).String(), nil)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/rusq/vhoster"
 	"github.com/rusq/vhoster/apiserver"
 )
 
@@ -88,9 +89,9 @@ func TestClient_List(t *testing.T) {
 		}
 
 		resp := apiserver.ListResponse{
-			Hosts: []apiserver.ListHost{
-				{Host: "test1.endless.lol", URI: "http://localhost:8080"},
-				{Host: "test2.endless.lol", URI: "http://localhost:8081"},
+			Hosts: []vhoster.Host{
+				{Name: "test1.endless.lol", URI: vhoster.Must(vhoster.Parse("http://localhost:8080"))},
+				{Name: "test2.endless.lol", URI: vhoster.Must(vhoster.Parse("http://localhost:8081"))},
 			},
 		}
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -113,16 +114,16 @@ func TestClient_List(t *testing.T) {
 	if len(hosts) != 2 {
 		t.Errorf("unexpected number of hosts: %d", len(hosts))
 	}
-	if hosts[0].Host != "test1.endless.lol" {
-		t.Errorf("unexpected hostname: %s", hosts[0].Host)
+	if hosts[0].Name != "test1.endless.lol" {
+		t.Errorf("unexpected hostname: %s", hosts[0].Name)
 	}
-	if hosts[0].URI != "http://localhost:8080" {
+	if hosts[0].URI.String() != "http://localhost:8080" {
 		t.Errorf("unexpected target: %s", hosts[0].URI)
 	}
-	if hosts[1].Host != "test2.endless.lol" {
-		t.Errorf("unexpected hostname: %s", hosts[1].Host)
+	if hosts[1].Name != "test2.endless.lol" {
+		t.Errorf("unexpected hostname: %s", hosts[1].Name)
 	}
-	if hosts[1].URI != "http://localhost:8081" {
+	if hosts[1].URI.String() != "http://localhost:8081" {
 		t.Errorf("unexpected target: %s", hosts[1].URI)
 	}
 }

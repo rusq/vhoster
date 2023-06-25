@@ -11,6 +11,10 @@ gateway:
 	go build -o $@ -ldflags="-s -w"  ./cmd/$@
 .PHONY: gateway # unconditional build.
 
+test:
+	go test -v ./...
+.PHONY: test
+
 docker:
 	docker build . -t $(REPO):$(TAG_LATEST)
 .PHONY: docker

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"time"
 
@@ -14,11 +13,11 @@ import (
 type duration time.Duration
 
 type Config struct {
-	GatewayAddress string   `json:"gateway_address,omitempty"`
-	DomainName     string   `json:"domain_name,omitempty"`
-	APIAddress     string   `json:"api_address,omitempty"`
-	Timeout        duration `json:"timeout,omitempty"`
-	StrHosts       []Host   `json:"hosts,omitempty"`
+	GatewayAddress string         `json:"gateway_address,omitempty"`
+	DomainName     string         `json:"domain_name,omitempty"`
+	APIAddress     string         `json:"api_address,omitempty"`
+	Timeout        duration       `json:"timeout,omitempty"`
+	Hosts          []vhoster.Host `json:"hosts,omitempty"`
 }
 
 func (c *Config) validate() error {
@@ -30,6 +29,11 @@ func (c *Config) validate() error {
 	}
 	if c.APIAddress == "" {
 		return errors.New("api address is empty")
+	}
+	for i, h := range c.Hosts {
+		if err := h.Validate(); err != nil {
+			return fmt.Errorf("error validating configuration host %d: %w", i, err)
+		}
 	}
 	return nil
 }
@@ -47,47 +51,6 @@ func (d *duration) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (c Config) Hosts() ([]vhoster.Host, error) {
-	var hs []vhoster.Host
-	for i, h := range c.StrHosts {
-		vh, err := h.toVhost(c.DomainName)
-		if err != nil {
-			return nil, fmt.Errorf("failed on host #%d: %w", i+1, err)
-		}
-		hs = append(hs, vh)
-	}
-	return hs, nil
-}
-
-type Host struct {
-	Subdomain string `json:"subdomain,omitempty"`
-	URL       string `json:"url,omitempty"`
-}
-
-func (h Host) validate() error {
-	if h.URL == "" {
-		return errors.New("host with empty url")
-	}
-	if h.Subdomain == "" {
-		return fmt.Errorf("host with empty subdomain for url: %s", h.URL)
-	}
-	return nil
-}
-
-func (h Host) toVhost(domain string) (vhoster.Host, error) {
-	if err := h.validate(); err != nil {
-		return vhoster.Host{}, err
-	}
-	u, err := url.Parse(h.URL)
-	if err != nil {
-		return vhoster.Host{}, err
-	}
-	return vhoster.Host{
-		Name: h.Subdomain + "." + domain,
-		URI:  u,
-	}, nil
-}
-
 func loadConfig(path string, cfg *Config) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -97,5 +60,9 @@ func loadConfig(path string, cfg *Config) error {
 	dec := json.NewDecoder(f)
 	dec.DisallowUnknownFields()
 
-	return dec.Decode(cfg)
+	if err := dec.Decode(cfg); err != nil {
+		return err
+	}
+
+	return cfg.validate()
 }

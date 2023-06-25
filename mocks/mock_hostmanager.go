@@ -76,3 +76,17 @@ func (mr *MockHostManagerMockRecorder) Remove(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockHostManager)(nil).Remove), arg0)
 }
+
+// Replace mocks base method.
+func (m *MockHostManager) Replace(arg0 string, arg1 *url.URL) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Replace", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Replace indicates an expected call of Replace.
+func (mr *MockHostManagerMockRecorder) Replace(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Replace", reflect.TypeOf((*MockHostManager)(nil).Replace), arg0, arg1)
+}
